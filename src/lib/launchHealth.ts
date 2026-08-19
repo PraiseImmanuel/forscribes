@@ -9,3 +9,7 @@ export async function getUnhealthyLaunchCount(): Promise<number> {
 export async function markLaunchHealthy(): Promise<void> {
   await invoke("mark_launch_healthy");
 }
+
+export async function readSidecarLog(): Promise<string> {
+  return invoke<string>("read_sidecar_log");
+}

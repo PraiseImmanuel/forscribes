@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { FolderOpen, X, CheckCircle2, XCircle, Loader2, Download } from "lucide-react";
 import { getHardware, getModels, type HardwareInfo, type ModelInfo } from "../lib/transcription";
 import { useTranscriptionJob } from "../context/TranscriptionJobContext";
+import { CopyDiagnosticsButton } from "../components/CopyDiagnosticsButton";
 import "./Transcribe.css";
 
 const AUDIO_EXTENSIONS = ["mp3", "wav", "m4a", "aac", "flac", "ogg", "wma", "mp4"];
@@ -174,9 +175,12 @@ export function Transcribe() {
               </p>
             )}
             {initError && (
-              <p className="inline-error">
-                Couldn't reach the local engine: {initError}. Try restarting ForScribe.
-              </p>
+              <>
+                <p className="inline-error">
+                  Couldn't reach the local engine: {initError}. Try restarting ForScribe.
+                </p>
+                <CopyDiagnosticsButton context={`Transcribe screen init error: ${initError}`} />
+              </>
             )}
             {hardware && (
               <p className="panel-hint">

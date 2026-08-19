@@ -7,6 +7,7 @@ import { checkHealth, type HealthResponse } from "../lib/sidecar";
 import { FeatureGrid } from "../components/FeatureGrid";
 import { useUpdater } from "../hooks/useUpdater";
 import { getUnhealthyLaunchCount, markLaunchHealthy } from "../lib/launchHealth";
+import { CopyDiagnosticsButton } from "../components/CopyDiagnosticsButton";
 
 // Mirrors UNHEALTHY_LAUNCH_WARNING_THRESHOLD in src-tauri/src/lib.rs.
 const UNHEALTHY_LAUNCH_WARNING_THRESHOLD = 3;
@@ -148,6 +149,17 @@ export function Dashboard() {
           {sidecar.kind === "ok" && <span>Local engine connected</span>}
           {sidecar.kind === "error" && <span>{sidecar.message}</span>}
         </motion.div>
+
+        {sidecar.kind === "error" && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3, duration: 0.5 }}
+            style={{ marginTop: "0.6rem" }}
+          >
+            <CopyDiagnosticsButton context={`Dashboard sidecar error: ${sidecar.message}`} />
+          </motion.div>
+        )}
 
         {sidecar.kind === "ok" && (
           <motion.p

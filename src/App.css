@@ -416,3 +416,22 @@
     box-shadow: 0 0 0 5px transparent;
   }
 }
+
+.diagnostics-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.diagnostics-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
