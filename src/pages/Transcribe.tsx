@@ -32,14 +32,16 @@ export function Transcribe() {
     let cancelled = false;
 
     async function loadInitialData() {
-      // The sidecar can take several seconds to come up on first launch -
-      // it's a PyInstaller onefile bundle, so every start re-extracts the
-      // whole thing before Python even runs, on top of slow ML imports
-      // (ctranslate2, onnxruntime, sklearn). A single unretried fetch here
-      // would fail outright on a slow machine, leaving the model dropdown
-      // permanently empty. Same 20x/500ms retry window as Dashboard's
-      // sidecar health check.
-      const maxAttempts = 20;
+      // The sidecar is a PyInstaller --onefile bundle: every launch, a
+      // bootloader process first re-extracts the whole ~150MB bundle (plus
+      // heavy ML libs - ctranslate2, onnxruntime, sklearn) to a temp folder
+      // before spawning the actual Python process that runs Uvicorn. On
+      // this project's reference hardware (dual-core, HDD) that alone has
+      // been measured taking 40+ seconds - confirmed as the actual cause of
+      // the "model list stays empty" report, not a quick hiccup. The 10s
+      // window this used to have (matching Dashboard's health check) wasn't
+      // nearly enough; both were undersized the same way.
+      const maxAttempts = 180; // 180 x 500ms = 90s
       for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         try {
           const [hw, modelsRes] = await Promise.all([getHardware(), getModels()]);
@@ -59,7 +61,7 @@ export function Transcribe() {
           if (attempt === maxAttempts) {
             if (!cancelled) {
               setInitError(
-                e instanceof Error ? e.message : "Could not reach the local engine after 10s.",
+                e instanceof Error ? e.message : "Could not reach the local engine after 90s.",
               );
               setLoadingInit(false);
             }
@@ -167,7 +169,8 @@ export function Transcribe() {
             <h3 className="panel-title">Model</h3>
             {loadingInit && (
               <p className="panel-hint">
-                <Loader2 size={13} className="spin" /> Connecting to the local engine…
+                <Loader2 size={13} className="spin" /> Connecting to the local engine… this can
+                take up to a minute the first time it starts.
               </p>
             )}
             {initError && (

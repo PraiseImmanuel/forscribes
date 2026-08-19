@@ -48,7 +48,15 @@ export function Dashboard() {
     let cancelled = false;
 
     async function waitForSidecar() {
-      const maxAttempts = 20;
+      // The sidecar is a PyInstaller --onefile bundle: every launch, a
+      // bootloader process first re-extracts the whole ~150MB bundle (plus
+      // heavy ML libs) to a temp folder before the real server process
+      // even starts. Measured at 40+ seconds on this project's reference
+      // hardware (dual-core, HDD) - the old 10s window here gave up while
+      // the sidecar was still legitimately starting, which is what was
+      // actually behind the "model list stays empty" report, not a quick
+      // hiccup this length of retry could paper over.
+      const maxAttempts = 180; // 180 x 500ms = 90s
       for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         try {
           const data = await checkHealth();
@@ -66,7 +74,7 @@ export function Dashboard() {
             if (!cancelled) {
               setSidecar({
                 kind: "error",
-                message: "Could not reach the local sidecar after 10s.",
+                message: "Could not reach the local sidecar after 90s.",
               });
             }
             return;
@@ -134,7 +142,9 @@ export function Dashboard() {
           variants={fadeUp}
         >
           <span className="status-dot" />
-          {sidecar.kind === "connecting" && <span>Connecting to local engine…</span>}
+          {sidecar.kind === "connecting" && (
+            <span>Connecting to local engine… (can take up to a minute on first launch)</span>
+          )}
           {sidecar.kind === "ok" && <span>Local engine connected</span>}
           {sidecar.kind === "error" && <span>{sidecar.message}</span>}
         </motion.div>
