@@ -170,7 +170,7 @@ export function Transcribe() {
             {loadingInit && (
               <p className="panel-hint">
                 <Loader2 size={13} className="spin" /> Connecting to the local engine… this can
-                take up to a minute the first time it starts.
+                take up to a minute each time ForScribe starts.
               </p>
             )}
             {initError && (

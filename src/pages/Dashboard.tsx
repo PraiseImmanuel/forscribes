@@ -143,7 +143,7 @@ export function Dashboard() {
         >
           <span className="status-dot" />
           {sidecar.kind === "connecting" && (
-            <span>Connecting to local engine… (can take up to a minute on first launch)</span>
+            <span>Connecting to local engine… (can take up to a minute each time ForScribe starts)</span>
           )}
           {sidecar.kind === "ok" && <span>Local engine connected</span>}
           {sidecar.kind === "error" && <span>{sidecar.message}</span>}
