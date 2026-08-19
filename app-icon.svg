@@ -1,0 +1,21 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8b5cf6" />
+      <stop offset="1" stop-color="#22d3ee" />
+    </linearGradient>
+  </defs>
+
+  <rect width="1024" height="1024" rx="232" fill="url(#bg)" />
+
+  <!-- Bold geometric "F", built from the same rounded-bar language as an
+       audio waveform - the two ideas (letterform / voice signal) collapse
+       into one mark. -->
+  <rect x="320" y="272" width="116" height="480" rx="34" fill="#ffffff" />
+  <rect x="320" y="272" width="344" height="116" rx="34" fill="#ffffff" />
+  <rect x="320" y="470" width="272" height="112" rx="32" fill="#ffffff" />
+
+  <!-- Trailing waveform ticks, fading out - "voice becoming text". -->
+  <rect x="700" y="322" width="28" height="76" rx="14" fill="#ffffff" fill-opacity="0.85" />
+  <rect x="756" y="350" width="28" height="20" rx="10" fill="#ffffff" fill-opacity="0.55" />
+</svg>
