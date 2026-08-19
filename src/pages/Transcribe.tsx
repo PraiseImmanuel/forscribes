@@ -24,21 +24,56 @@ export function Transcribe() {
   const [selectedModel, setSelectedModel] = useState<string>("");
   const [files, setFiles] = useState<string[]>([]);
   const [pickError, setPickError] = useState<string | null>(null);
+  const [initError, setInitError] = useState<string | null>(null);
+  const [loadingInit, setLoadingInit] = useState(true);
   const { job, starting, startError, startJob, dismissJob } = useTranscriptionJob();
 
   useEffect(() => {
-    (async () => {
-      const [hw, modelsRes] = await Promise.all([getHardware(), getModels()]);
-      setHardware(hw);
-      setModels(modelsRes.models);
-      // A previously-picked model wins over the hardware recommendation -
-      // otherwise every fresh visit to this screen quietly reverts your
-      // choice back to the default, which is exactly what caused the
-      // "I picked Large v3 but it used Base" confusion.
-      const remembered = localStorage.getItem(MODEL_STORAGE_KEY);
-      const isValidRemembered = remembered && modelsRes.models.some((m) => m.id === remembered);
-      setSelectedModel(isValidRemembered ? remembered : hw.recommended_model);
-    })();
+    let cancelled = false;
+
+    async function loadInitialData() {
+      // The sidecar can take several seconds to come up on first launch -
+      // it's a PyInstaller onefile bundle, so every start re-extracts the
+      // whole thing before Python even runs, on top of slow ML imports
+      // (ctranslate2, onnxruntime, sklearn). A single unretried fetch here
+      // would fail outright on a slow machine, leaving the model dropdown
+      // permanently empty. Same 20x/500ms retry window as Dashboard's
+      // sidecar health check.
+      const maxAttempts = 20;
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+          const [hw, modelsRes] = await Promise.all([getHardware(), getModels()]);
+          if (cancelled) return;
+          setHardware(hw);
+          setModels(modelsRes.models);
+          // A previously-picked model wins over the hardware recommendation -
+          // otherwise every fresh visit to this screen quietly reverts your
+          // choice back to the default, which is exactly what caused the
+          // "I picked Large v3 but it used Base" confusion.
+          const remembered = localStorage.getItem(MODEL_STORAGE_KEY);
+          const isValidRemembered = remembered && modelsRes.models.some((m) => m.id === remembered);
+          setSelectedModel(isValidRemembered ? remembered : hw.recommended_model);
+          setLoadingInit(false);
+          return;
+        } catch (e) {
+          if (attempt === maxAttempts) {
+            if (!cancelled) {
+              setInitError(
+                e instanceof Error ? e.message : "Could not reach the local engine after 10s.",
+              );
+              setLoadingInit(false);
+            }
+            return;
+          }
+          await new Promise((r) => setTimeout(r, 500));
+        }
+      }
+    }
+
+    loadInitialData();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   function selectModel(modelId: string) {
@@ -130,6 +165,16 @@ export function Transcribe() {
 
           <div className="panel">
             <h3 className="panel-title">Model</h3>
+            {loadingInit && (
+              <p className="panel-hint">
+                <Loader2 size={13} className="spin" /> Connecting to the local engine…
+              </p>
+            )}
+            {initError && (
+              <p className="inline-error">
+                Couldn't reach the local engine: {initError}. Try restarting ForScribe.
+              </p>
+            )}
             {hardware && (
               <p className="panel-hint">
                 Detected: {hardware.cpu_count} core{hardware.cpu_count === 1 ? "" : "s"}
@@ -141,18 +186,20 @@ export function Transcribe() {
                 <strong>{hardware.recommended_model}</strong>
               </p>
             )}
-            <select
-              className="model-select"
-              value={selectedModel}
-              onChange={(e) => selectModel(e.target.value)}
-            >
-              {models.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.label} ({m.params}) — {m.speed}, {m.accuracy} accuracy
-                  {m.id === hardware?.recommended_model ? " · recommended" : ""}
-                </option>
-              ))}
-            </select>
+            {!loadingInit && !initError && (
+              <select
+                className="model-select"
+                value={selectedModel}
+                onChange={(e) => selectModel(e.target.value)}
+              >
+                {models.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.label} ({m.params}) — {m.speed}, {m.accuracy} accuracy
+                    {m.id === hardware?.recommended_model ? " · recommended" : ""}
+                  </option>
+                ))}
+              </select>
+            )}
             {showsDownloadWarning && selectedModelInfo && (
               <p className="inline-notice">
                 <Download size={13} />
@@ -165,7 +212,7 @@ export function Transcribe() {
           <button
             className="btn-primary"
             onClick={beginTranscription}
-            disabled={files.length === 0 || starting}
+            disabled={files.length === 0 || starting || loadingInit || !!initError}
           >
             {starting ? "Starting…" : `Transcribe ${files.length || ""} file${files.length === 1 ? "" : "s"}`}
           </button>

@@ -11,6 +11,14 @@ use std::sync::Mutex;
 
 use tauri::Manager;
 
+// The sidecar (venv python.exe in dev, the PyInstaller exe in production)
+// is a console-subsystem executable. Spawned from a GUI app with no flags,
+// Windows pops open a visible terminal for it - CREATE_NO_WINDOW tells
+// Windows not to allocate that window while leaving the process's stdio
+// handles intact.
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+
 /// Holds a handle to the running Python sidecar process so we can kill it
 /// when the app exits. Without this, closing the window would leave an
 /// orphaned python.exe running in the background.
@@ -26,10 +34,15 @@ fn spawn_sidecar() -> std::io::Result<Child> {
     let sidecar_dir = std::path::Path::new(manifest_dir).join("../python-sidecar");
     let python_exe = sidecar_dir.join(".venv/Scripts/python.exe");
 
-    Command::new(python_exe)
-        .arg("main.py")
-        .current_dir(sidecar_dir)
-        .spawn()
+    #[cfg_attr(not(windows), allow(unused_mut))]
+    let mut cmd = Command::new(python_exe);
+    cmd.arg("main.py").current_dir(sidecar_dir);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+    cmd.spawn()
 }
 
 #[cfg(not(debug_assertions))]
@@ -44,7 +57,15 @@ fn spawn_sidecar() -> std::io::Result<Child> {
         std::io::Error::new(std::io::ErrorKind::NotFound, "app exe has no parent directory")
     })?;
     let sidecar_path = exe_dir.join("forscribe-sidecar.exe");
-    Command::new(sidecar_path).spawn()
+
+    #[cfg_attr(not(windows), allow(unused_mut))]
+    let mut cmd = Command::new(sidecar_path);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+    cmd.spawn()
 }
 
 // --- Rollback safety net -----------------------------------------------------
