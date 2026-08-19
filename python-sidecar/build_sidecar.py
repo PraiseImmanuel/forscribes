@@ -25,7 +25,6 @@ COLLECT_ALL = [
     "onnxruntime",
     "fastembed",
     "sklearn",
-    "llama_cpp",
     "tokenizers",
     # faster_whisper ships its VAD model (silero_vad_v6.onnx) as package
     # data, not code - without --collect-all it's silently left out and
