@@ -28,16 +28,21 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="ForScribe Sidecar", lifespan=lifespan)
 
-# The Tauri webview loads the frontend from tauri://localhost (production)
-# or http://localhost:1420 (vite dev server). Both need CORS clearance to
-# call this sidecar on a different port.
+# Wide open on purpose, not an oversight: this server only ever binds
+# 127.0.0.1, so nothing outside this machine can reach it regardless of
+# what CORS allows, and it holds no cookies/session state a hostile page
+# could ride along on. Previously this pinned an exact allowlist (mirroring
+# the origins Tauri/the dev server are *supposed* to use), which turned out
+# to be exactly the kind of thing this app's real production WebView2 build
+# didn't match - the sidecar would log a clean 200 OK for every request
+# while the browser silently discarded the response before JS ever saw it,
+# which looked identical to the sidecar being unreachable. Matching the
+# real origin string exactly was a game of whack-a-mole not worth playing
+# when the actual security boundary here is the network binding above, not
+# CORS - so there's nothing left to get wrong.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "tauri://localhost",
-        "http://localhost:1420",
-        "http://127.0.0.1:1420",
-    ],
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
